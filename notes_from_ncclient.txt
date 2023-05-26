@@ -1,0 +1,181 @@
+###############
+# Script OUTPUT 
+###############
+
+bogus@test-srv4:~/PY$ ./test_netconf_query_7.py 
+Enter target E9 hostname or ipaddr: uat2
+Enter netconf_ssh login username: bogus0
+Enter netconf_ssh login password: 
+Enter netconf_ssh port [hit return for port 830]: 
+2023-05-26 16:35:08,038 root       INFO   Ncclient script is starting.
+2023-05-26 16:35:09,035 root       INFO   uat2 connected
+2023-05-26 16:35:09,035 root       INFO   Targetting netconf host uat2
+2023-05-26 16:35:09,035 root       INFO   Sending rpc: 
+<upload-config-file xmlns="http://www.calix.com/ns/exa/base">
+<location>1/1</location>
+<vrf>MGMT</vrf>
+<from-file>startup-config.xml</from-file>
+<to-URI>scp://bogus@192.168.254.254//home/bogus/Calix_Test.xml</to-URI>
+<password>test123</password>
+</upload-config-file>
+
+2023-05-26 16:35:09,221 root       INFO   RPC/netconf got a reply
+2023-05-26 16:35:09,221 root       INFO   RPC reply: <?xml version="1.0" encoding="UTF-8"?>
+<rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="urn:uuid:e05c2db0-550d-416a-8638-8b22a08d12e4" xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0"><status xmlns='http://www.calix.com/ns/exa/base'>Initiating upload</status>
+</rpc-reply>
+2023-05-26 16:35:09,221 root       INFO   Writing response to file
+bogus@test-srv4:~/PY$ 
+
+##############
+# E9-OUTPUT
+##############
+ SECURITY EVENT 101 'user-login' at 05-26-2023 15:36:55/config/system/aaa/user[name='bogus0']  
+ GENERAL EVENT 2401 'transfer-requested' at 05-26-2023 15:36:55/config/system  
+ SECURITY EVENT 102 'user-logout' at 05-26-2023 15:36:55/config/system/aaa/user[name='bogus0']  
+ GENERAL EVENT 2406 'config-file-copied' at 05-26-2023 15:36:59/config/system  
+
+##############
+# SERVER OUTPUT
+##############
+bogus@test-srv6:~$ ls -la Cal*
+-rw-r--r-- 1 bogus bogus 778692 May 26 16:35 Calix_Test.xml
+bogus@test-srv6:~$ 
+
+# -------
+# SCRIPT
+# -------
+#!/usr/bin/env python3
+"""
+##########################
+# test_netconf_query_7.py
+##########################
+
+Retrieve AXOS runniung via netconf.
+
+"""
+import logging
+from logging.config import dictConfig
+from collections import defaultdict
+from getpass import getpass as gp
+from ncclient import manager
+from ncclient.xml_ import to_ele
+
+
+###############################################################################
+# START INPUT VARIABLES
+###############################################################################
+DEVICE_DICT = {
+    'host': input('Enter target E9 hostname or ipaddr: '),
+    'user': input('Enter netconf_ssh login username: '),
+    'password': gp('Enter netconf_ssh login password: '),
+    'port': int(input('Enter netconf_ssh port [hit return for port 830]: ') or "830")
+}
+###############################################################################
+# END INPUT VARIABLES
+###############################################################################
+
+###############################################################################
+# VARIABLES
+###############################################################################
+
+RPC_COPY_CONFIG_0 = """
+<upload-config-file xmlns="http://www.calix.com/ns/exa/base">
+<location>1/1</location>
+<vrf>MGMT</vrf>
+<from-file>startup-config.xml</from-file>
+<to-URI>scp://bogus@192.168.254.254//home/bogus/Calix_Test.xml</to-URI>
+<password>test123</password>
+</upload-config-file>
+"""
+
+
+###############################################################################
+# FUNCTION [0] TO SETUP LOGGING
+###############################################################################
+def init_logger():
+    """
+    DEFINE LOGGER FUNCTIONS
+    """
+    logging_config = dict(
+        version=1,
+        formatters={
+            "format_f": {
+                "format": "%(asctime)s %(name)-10s %(levelname)-6s %(message)s"
+            }
+        },
+        handlers={
+            "handler_h": {
+                "class": "logging.StreamHandler",
+                "formatter": "format_f",
+                #"level": logging.INFO,
+                "level": logging.DEBUG,
+            }
+        },
+        root={
+            "handlers": ["handler_h"],
+            "level": logging.DEBUG,
+        },
+    )
+    dictConfig(logging_config)
+    logger = logging.getLogger()
+    #logging.getLogger("netmiko").setLevel(logging.WARNING)
+    logging.getLogger("ncclient").setLevel(logging.DEBUG)
+    if logger:
+        return True
+
+
+###############################################################################
+# FUNCTION [1]
+###############################################################################
+def netconf_connect(net_info):
+    """
+    Est. Netconf via SSH connection to target. The external ncclient library
+    is used for creating this connection.
+    ----------------
+    Expecting a dict
+    """
+    axos_conn = manager.connect(host=net_info['host'],
+                                    username=net_info['user'],
+                                    password=net_info['password'],
+                                    port=net_info['port'],
+                                    hostkey_verify=False,
+                                    allow_agent=False,
+                                    look_for_keys=False,
+                                    timeout = 120)
+    if axos_conn.connected:
+        logging.info('{0} connected'.format(net_info['host']))
+        return axos_conn
+
+
+###############################################################################
+# MAIN
+###############################################################################
+def main():
+    """
+    MAIN
+    """
+    # Call the logger
+    rpc_reply = ''
+    file_zer0 = '/tmp/config.xml'
+    start_logging = init_logger()
+    if start_logging:
+        logging.info("Ncclient script is starting.")
+    with netconf_connect(DEVICE_DICT) as axos_query:
+        logging.info('Targetting netconf host {0}'.format(DEVICE_DICT['host']))
+        logging.info('Sending rpc: {0}'.format(RPC_COPY_CONFIG_0))
+        try:
+            rpc_reply = axos_query.dispatch(to_ele(RPC_COPY_CONFIG_0))
+            if rpc_reply:
+                logging.info("RPC/netconf got a reply")
+                logging.info(f"RPC reply: {rpc_reply}")
+                logging.info("Writing response to file")
+                with open((file_zer0), "w", encoding='UTF-8') as f_0:
+                    f_0.write(str(rpc_reply))
+                    f_0.close()
+        except Exception as sessionException:
+            print("An exception occurred while closing the session :" + str(sessionException))
+
+
+if __name__ == '__main__':
+    main()
+
