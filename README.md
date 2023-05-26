@@ -1,6 +1,6 @@
 # ANOTHER-NETCONF-EXAMPLE
 
-Another ncclient example -- I found that to "send" and REPC 'command', we needed to use the "from ncclient.xml_ import to_ele" -- so the key were these lines:
+Another ncclient example -- I found that to "send" and RPC 'command', we needed to use the "from ncclient.xml_ import to_ele" -- so the key were these lines:
 
     with netconf_connect(DEVICE_DICT) as axos_query:
         logging.info('Targetting netconf host {0}'.format(DEVICE_DICT['host']))
