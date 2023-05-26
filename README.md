@@ -1,4 +1,4 @@
-# ANOTHER-NETCONF-EXAMPLE
+# ANOTHER NETCONF AXOS (E9) EXAMPLE
 
 Another ncclient example -- I found that to "send" and RPC 'command', we needed to use the "from ncclient.xml_ import to_ele" -- so the key were these lines:
 
@@ -24,6 +24,9 @@ Enter netconf_ssh port [hit return for port 830]:
 2023-05-26 16:35:09,035 root       INFO   nuat2 connected
 2023-05-26 16:35:09,035 root       INFO   Targetting netconf host uat2
 2023-05-26 16:35:09,035 root       INFO   Sending rpc: 
+</pre>
+
+```xml
 <upload-config-file xmlns="http://www.calix.com/ns/exa/base">
 <location>1/1</location>
 <vrf>MGMT</vrf>
@@ -31,7 +34,11 @@ Enter netconf_ssh port [hit return for port 830]:
 <to-URI>scp://bogus@192.168.254.254//home/bogus/Calix_Test.xml</to-URI>
 <password>test123</password>
 </upload-config-file>
+```
 
+
+ 
+<pre>
 2023-05-26 16:35:09,221 root       INFO   RPC/netconf got a reply
 2023-05-26 16:35:09,221 root       INFO   RPC reply: <?xml version="1.0" encoding="UTF-8"?>
 <rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="urn:uuid:e05c2db0-550d-416a-8638-8b22a08d12e4" xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0"><status xmlns='http://www.calix.com/ns/exa/base'>Initiating upload</status>
